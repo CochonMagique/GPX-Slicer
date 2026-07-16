@@ -1,5 +1,3 @@
-import GpxParser from "gpxparser";
-import { format } from "date-fns";
 
 export interface TrackPoint {
   lat: number;
@@ -49,71 +47,85 @@ export const parseGpxFile = async (file: File): Promise<{ points: TrackPoint[]; 
     reader.onload = (e) => {
       try {
         const gpxContent = e.target?.result as string;
-        const gpx = new GpxParser();
-        gpx.parse(gpxContent);
 
-        const tracks = gpx.tracks;
-        if (!tracks || tracks.length === 0) {
+        // Single DOM pass over the file. (This used to go through the
+        // gpxparser package plus a second DOMParser pass to work around its
+        // multi-track elevation bug; parsing directly needs neither the
+        // extra pass nor the dependency, and textContent decodes XML
+        // entities correctly where gpxparser's innerHTML did not.)
+        const xmlDoc = new DOMParser().parseFromString(gpxContent, "text/xml");
+        if (xmlDoc.querySelector("parsererror")) {
+          reject(new Error("Not a valid GPX file"));
+          return;
+        }
+
+        const xmlTracks = Array.from(xmlDoc.querySelectorAll("trk"));
+        if (xmlTracks.length === 0) {
           reject(new Error("No track found in GPX file"));
           return;
         }
 
+        type RawPoint = { lat: number; lon: number; ele: number | null; time?: Date };
+        const tracks = xmlTracks.map((trk) => {
+          const points: RawPoint[] = [];
+          trk.querySelectorAll("trkpt").forEach((pt) => {
+            const lat = parseFloat(pt.getAttribute("lat") ?? "");
+            const lon = parseFloat(pt.getAttribute("lon") ?? "");
+            // A malformed trkpt (missing/garbage lat or lon) would poison
+            // every subsequent cumulative distance with NaN — skip it.
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+            const eleText = pt.querySelector("ele")?.textContent;
+            const ele = eleText != null ? parseFloat(eleText) : NaN;
+            const timeText = pt.querySelector("time")?.textContent;
+            const time = timeText ? new Date(timeText) : undefined;
+
+            points.push({
+              lat,
+              lon,
+              ele: Number.isFinite(ele) ? ele : null,
+              time: time && !isNaN(time.getTime()) ? time : undefined,
+            });
+          });
+          // :scope > name — the track's own name, not one nested in a trkpt.
+          const name = trk.querySelector(":scope > name")?.textContent?.trim() || null;
+          return { name, points };
+        });
+
         let cumulativeDist = 0;
         let totalElevation = 0;
         let totalElevationLoss = 0;
-        let lastKnownElevation = 0;
         const allPoints: TrackPoint[] = [];
         const originalSplitDistances: number[] = [];
 
-        // Parse elevation manually from raw XML (gpxparser bug: only reads ele for first track)
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(gpxContent, "text/xml");
-        const xmlTracks = xmlDoc.querySelectorAll("trk");
-
-        // Build a map of elevation values: elevationMap[trackIndex][pointIndex] = elevation
-        const elevationMap: (number | null)[][] = [];
-        xmlTracks.forEach((xmlTrack) => {
-          const trackElevations: (number | null)[] = [];
-          const trkpts = (xmlTrack as Element).querySelectorAll("trkpt");
-          trkpts.forEach((trkpt) => {
-            const eleNode = (trkpt as Element).querySelector("ele");
-            const ele = eleNode ? parseFloat(eleNode.textContent || "") : null;
-            trackElevations.push((ele === null || isNaN(ele)) ? null : ele);
-          });
-          elevationMap.push(trackElevations);
-        });
+        // Seed missing-elevation fill from the first real elevation in the
+        // file, not 0 — otherwise leading no-<ele> points fabricate a huge
+        // fake climb from sea level up to the first real reading.
+        let lastKnownElevation =
+          tracks.flatMap((t) => t.points).find((p) => p.ele !== null)?.ele ?? 0;
 
         tracks.forEach((track, trackIndex) => {
-          track.points.forEach((p, i) => {
+          track.points.forEach((p) => {
             let dist = 0;
-            if (i > 0) {
-              const prev = track.points[i - 1];
+            const prev = allPoints[allPoints.length - 1];
+            if (prev) {
               dist = calculateDistance(prev.lat, prev.lon, p.lat, p.lon);
-            } else if (trackIndex > 0) {
-              // Connect to the last point of the previous track
-              const prevTrack = tracks[trackIndex - 1];
-              if (prevTrack.points.length > 0) {
-                const prev = prevTrack.points[prevTrack.points.length - 1];
-                dist = calculateDistance(prev.lat, prev.lon, p.lat, p.lon);
-              }
+              if (!Number.isFinite(dist)) dist = 0;
             }
-            
+
             cumulativeDist += dist;
 
-            // Get elevation from our manual parsing (fixes gpxparser multi-track bug)
-            const rawElevation = elevationMap[trackIndex]?.[i] ?? null;
-            const elevation = rawElevation ?? lastKnownElevation;
-            
-            // Calculate stats using corrected elevation
+            const elevation = p.ele ?? lastKnownElevation;
+
             // Skip only the very first point in the entire route
             if (allPoints.length > 0) {
               const diff = elevation - lastKnownElevation;
               if (diff > 0) totalElevation += diff;
               else totalElevationLoss += Math.abs(diff);
             }
-            
+
             lastKnownElevation = elevation;
-            
+
             allPoints.push({
               lat: p.lat,
               lon: p.lon,
@@ -130,12 +142,12 @@ export const parseGpxFile = async (file: File): Promise<{ points: TrackPoint[]; 
         });
 
         // Determine name
-        let name = file.name.replace(".gpx", "");
+        let name = file.name.replace(/\.gpx$/i, "");
         if (tracks.length === 1 && tracks[0].name) {
           name = tracks[0].name;
         } else if (tracks.length > 1) {
           // Try to extract common base name if multiple tracks have names
-          const names = tracks.map(t => t.name).filter(Boolean);
+          const names = tracks.map(t => t.name).filter((n): n is string => Boolean(n));
           if (names.length === tracks.length) {
             const common = findCommonPrefix(names).trim();
             // Use common prefix if it's substantial enough
@@ -152,13 +164,13 @@ export const parseGpxFile = async (file: File): Promise<{ points: TrackPoint[]; 
           totalDistance: cumulativeDist,
           totalElevation: totalElevation,
           totalElevationLoss: totalElevationLoss,
-          name: decodeHtmlEntities(name),
+          name,
         };
 
-        resolve({ 
-          points: allPoints, 
+        resolve({
+          points: allPoints,
           stats,
-          originalSplitDistances: originalSplitDistances.length > 0 ? originalSplitDistances : undefined 
+          originalSplitDistances: originalSplitDistances.length > 0 ? originalSplitDistances : undefined
         });
       } catch (err) {
         reject(err);
@@ -197,15 +209,47 @@ function deg2rad(deg: number): number {
   return deg * (Math.PI / 180);
 }
 
-function decodeHtmlEntities(text: string): string {
+// Escape text for embedding in XML element content or attributes.
+function escapeXml(text: string): string {
   return text
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
+
+// Make a string safe to use as a download filename across OSes.
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[/\\:*?"<>|]/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/[. ]+$/, "")
+    .trim() || "segment";
+}
+
+// points are sorted by cumulative distance, so locate a [startDist, endDist]
+// range with binary search + slice instead of filtering the whole array
+// (matters on every divider drag with 10k+ point routes).
+export const sliceByDistance = (points: TrackPoint[], startDist: number, endDist: number): TrackPoint[] => {
+  if (points.length === 0 || endDist < startDist) return [];
+  // lower bound: first index with dist >= startDist
+  let lo = 0, hi = points.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid].dist < startDist) lo = mid + 1;
+    else hi = mid;
+  }
+  const start = lo;
+  // upper bound: first index with dist > endDist
+  hi = points.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid].dist <= endDist) lo = mid + 1;
+    else hi = mid;
+  }
+  return points.slice(start, lo);
+};
 
 export const calculateSegmentStats = (points: TrackPoint[], startDist: number, endDist: number) => {
   // Filter points within the distance range
@@ -213,8 +257,8 @@ export const calculateSegmentStats = (points: TrackPoint[], startDist: number, e
   // but for this UI finding the closest points is usually sufficient for a first pass.
   // For better accuracy, we'll just slice the array.
   
-  const segmentPoints = points.filter(p => p.dist >= startDist && p.dist <= endDist);
-  
+  const segmentPoints = sliceByDistance(points, startDist, endDist);
+
   if (segmentPoints.length < 2) {
     return {
       distance: 0,
@@ -247,18 +291,19 @@ export const generateGpxXml = (points: TrackPoint[], segments: Segment[], origin
   const files: { filename: string, content: string }[] = [];
 
   segments.forEach((segment) => {
-    const segmentPoints = points.filter(p => p.dist >= segment.startDist && p.dist <= segment.endDist);
-    
+    const segmentPoints = sliceByDistance(points, segment.startDist, segment.endDist);
+
     if (segmentPoints.length === 0) return;
 
+    const safeName = escapeXml(segment.name);
     let gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="GPX Route Splitter" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="GPX Slicer (gpxslicer.com)" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <name>${segment.name}</name>
+    <name>${safeName}</name>
     <time>${new Date().toISOString()}</time>
   </metadata>
   <trk>
-    <name>${segment.name}</name>
+    <name>${safeName}</name>
     <trkseg>
 `;
 
@@ -273,8 +318,8 @@ export const generateGpxXml = (points: TrackPoint[], segments: Segment[], origin
   </trk>
 </gpx>`;
 
-        files.push({
-      filename: `${segment.name} - ${originalName}.gpx`,
+    files.push({
+      filename: sanitizeFilename(`${segment.name} - ${originalName}`) + ".gpx",
       content: gpx
     });
   });

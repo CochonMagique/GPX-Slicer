@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Helmet } from "react-helmet";
 import { SplitterSidebar } from "../components/SplitterSidebar";
 import { SplitterMap } from "../components/SplitterMap";
 import { SplitterElevationProfile } from "../components/SplitterElevationProfile";
@@ -27,6 +26,11 @@ export default function IndexPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [lastModifiedSegmentIndex, setLastModifiedSegmentIndex] = useState<number | null>(null);
 
+  // Keep the tab title in sync with app state (replaces react-helmet).
+  useEffect(() => {
+    document.title = routeStats ? "Splitter | GPX Slicer" : "GPX Slicer";
+  }, [routeStats]);
+
   // Handle file upload
   const handleFileUpload = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -36,6 +40,12 @@ export default function IndexPage() {
 
     try {
       const { points: parsedPoints, stats, originalSplitDistances } = await parseGpxFile(file);
+
+      if (parsedPoints.length < 2 || stats.totalDistance <= 0) {
+        toast.error("This GPX file has no usable distance — nothing to split.");
+        return;
+      }
+
       setPoints(parsedPoints);
       setRouteStats(stats);
       setLastModifiedSegmentIndex(null);
@@ -235,13 +245,19 @@ stats
     // Remove the segment
     newSegments.splice(segmentIndex, 1);
 
-    // Reassign colors based on new indices
-    const recoloredSegments = newSegments.map((seg, idx) => ({
+    // Reassign names and colors based on new indices, so exported files and
+    // embedded track names stay in sync with the "Day N" labels in the UI
+    // (handleAddSegmentBoundary renumbers the same way).
+    const renumberedSegments = newSegments.map((seg, idx) => ({
       ...seg,
+      name: `Day ${idx + 1}`,
       color: SEGMENT_COLORS[idx % SEGMENT_COLORS.length],
     }));
 
-    setSegments(recoloredSegments);
+    setSegments(renumberedSegments);
+    // Indices shifted — the remembered "last modified" boundary no longer
+    // points at the same segment.
+    setLastModifiedSegmentIndex(null);
     toast.success("Segment removed");
   };
 
@@ -274,11 +290,15 @@ stats
   const downloadFile = (filename: string, content: string) => {
     const element = document.createElement("a");
     const file = new Blob([content], { type: "application/gpx+xml" });
-    element.href = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
+    element.href = url;
     element.download = filename;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+    // Release the blob once the download has been handed to the browser —
+    // otherwise every export leaks a Blob for the lifetime of the page.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
 
   const handleDistributeEvenly = () => {
@@ -308,14 +328,18 @@ stats
   const handleSegmentBoundaryChange = (segmentIndex: number, newEndDistance: number) => {
     if (!routeStats || segmentIndex >= segments.length - 1) return;
 
-    // Validate: newEndDistance must be between previous segment's end and next segment's end
-    const minDist = segmentIndex > 0 ? segments[segmentIndex - 1].endDist : 0;
-    const maxDist = segments[segmentIndex + 1].endDist;
+    // The boundary must stay between the previous segment's end and the next
+    // segment's end. Clamp instead of rejecting: a silent reject leaves the
+    // dragged Leaflet marker stranded wherever it was dropped (the segments
+    // state doesn't change, so the marker's position prop never resets), and
+    // the elevation divider clamps its drag to exactly [min, max], which a
+    // strict-inequality reject would always no-op.
+    const MIN_SEGMENT_KM = 0.05;
+    const minDist = (segmentIndex > 0 ? segments[segmentIndex - 1].endDist : 0) + MIN_SEGMENT_KM;
+    const maxDist = segments[segmentIndex + 1].endDist - MIN_SEGMENT_KM;
+    if (minDist >= maxDist) return; // neighbors too close to fit a boundary between them
 
-    if (newEndDistance <= minDist || newEndDistance >= maxDist) {
-      console.warn(`Invalid boundary distance: ${newEndDistance} must be between ${minDist} and ${maxDist}`);
-      return;
-    }
+    const clampedEnd = Math.max(minDist, Math.min(maxDist, newEndDistance));
 
     // Update segments
     const newSegments = [...segments];
@@ -323,15 +347,15 @@ stats
     // Update current segment's end
     newSegments[segmentIndex] = {
       ...newSegments[segmentIndex],
-      endDist: newEndDistance,
-      stats: calculateSegmentStats(points, newSegments[segmentIndex].startDist, newEndDistance),
+      endDist: clampedEnd,
+      stats: calculateSegmentStats(points, newSegments[segmentIndex].startDist, clampedEnd),
     };
 
     // Update next segment's start
     newSegments[segmentIndex + 1] = {
       ...newSegments[segmentIndex + 1],
-      startDist: newEndDistance,
-      stats: calculateSegmentStats(points, newEndDistance, newSegments[segmentIndex + 1].endDist),
+      startDist: clampedEnd,
+      stats: calculateSegmentStats(points, clampedEnd, newSegments[segmentIndex + 1].endDist),
     };
 
     setSegments(newSegments);
@@ -407,9 +431,6 @@ stats
   if (!routeStats) {
     return (
       <div className={styles.container}>
-        <Helmet>
-          <title>GPX Route Splitter</title>
-        </Helmet>
         <div className={styles.initialState}>
           <div className={styles.initialStateContent}>
             <div className={`${styles.heroIcon} ${isUploading ? styles.heroIconLoading : ''}`}>
@@ -421,6 +442,7 @@ stats
               <FileDropzone
                 accept=".gpx"
                 maxFiles={1}
+                maxSize={50 * 1024 * 1024}
                 onFilesSelected={handleFileUpload}
                 title="Drop your GPX file here"
                 subtitle="or click to browse"
@@ -445,10 +467,6 @@ stats
   // Loaded state - show panels with animation
   return (
     <div className={styles.container}>
-      <Helmet>
-        <title>Splitter | GPX Route Splitter</title>
-      </Helmet>
-
       <div className={styles.appLayout}>
         {/* Sidebar */}
         <aside className={`${styles.sidebar} ${isLoaded ? styles.sidebarVisible : ''}`}>

@@ -43,6 +43,9 @@ export const SplitterSidebar: React.FC<SplitterSidebarProps> = ({
   const previousSegmentsRef = useRef<string[]>([]);
   const previousCountRef = useRef<number>(0);
   const hasInitializedRef = useRef<boolean>(false);
+  // Latest day count already scheduled by a pending minus-click animation, so
+  // rapid clicks chain decrements instead of all reading the same stale state.
+  const pendingDayCountRef = useRef<number | null>(null);
   const previousSegmentDataRef = useRef<Map<string, { distance: number; elevationGain: number; elevationLoss: number; color: string }>>(new Map());
 
   useEffect(() => {
@@ -162,25 +165,35 @@ export const SplitterSidebar: React.FC<SplitterSidebarProps> = ({
   };
 
   const handleMinusButtonClick = () => {
-    if (dayCount <= 1 || segments.length === 0) return;
-    
+    // Base the decrement on any count already scheduled by a previous click's
+    // 300ms animation — otherwise rapid clicks all capture the same stale
+    // dayCount and only one decrement survives.
+    const baseCount = pendingDayCountRef.current ?? dayCount;
+    if (baseCount <= 1 || segments.length === 0) return;
+    const newCount = baseCount - 1;
+    pendingDayCountRef.current = newCount;
+
     // Get the last segment
     const lastSegment = segments[segments.length - 1];
-    
+
     // Phase 1: Slide out animation (150ms)
     setExitingSegments(prev => new Set(prev).add(lastSegment.id));
-    
+
     // Phase 2: Start collapse animation after 100ms (overlapping with slide-out)
     setTimeout(() => {
       setCollapsingSegments(prev => new Set(prev).add(lastSegment.id));
     }, 100);
-    
+
     // After both animations complete, decrease the count (150ms slide + 150ms collapse)
     setTimeout(() => {
-      const newCount = dayCount - 1;
-      setDayCount(newCount);
-      onSegmentCountChange(newCount);
-      
+      // Apply only if this is still the latest scheduled count — a later
+      // minus click superseded this one, or a plus click cancelled it.
+      if (pendingDayCountRef.current === newCount) {
+        pendingDayCountRef.current = null;
+        setDayCount(newCount);
+        onSegmentCountChange(newCount);
+      }
+
       setExitingSegments(prev => {
         const next = new Set(prev);
         next.delete(lastSegment.id);
@@ -291,8 +304,10 @@ export const SplitterSidebar: React.FC<SplitterSidebarProps> = ({
             size="icon-md"
             className={`${styles.dayBtn} ${styles.dayBtnRight}`}
             onClick={() => {
-              if (dayCount < 20) {
-                const newCount = dayCount + 1;
+              const baseCount = pendingDayCountRef.current ?? dayCount;
+              if (baseCount < 20) {
+                const newCount = baseCount + 1;
+                pendingDayCountRef.current = null;
                 setDayCount(newCount);
                 onSegmentCountChange(newCount);
               }

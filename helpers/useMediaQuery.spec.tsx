@@ -1,16 +1,17 @@
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useMediaQuery } from "./useMediaQuery";
 
 describe("useMediaQuery", () => {
-  let matchMedia: jasmine.Spy;
-  let addListener: jasmine.Spy;
-  let removeListener: jasmine.Spy;
+  let matchMedia: Mock;
+  let addListener: Mock;
+  let removeListener: Mock;
 
   beforeEach(() => {
-    addListener = jasmine.createSpy("addEventListener");
-    removeListener = jasmine.createSpy("removeEventListener");
+    addListener = vi.fn();
+    removeListener = vi.fn();
 
-    matchMedia = jasmine.createSpy("matchMedia").and.returnValue({
+    matchMedia = vi.fn().mockReturnValue({
       matches: false,
       addEventListener: addListener,
       removeEventListener: removeListener,
@@ -32,7 +33,7 @@ describe("useMediaQuery", () => {
 
   it("should add event listener on mount", () => {
     renderHook(() => useMediaQuery("(min-width: 768px)"));
-    expect(addListener).toHaveBeenCalledWith("change", jasmine.any(Function));
+    expect(addListener).toHaveBeenCalledWith("change", expect.any(Function));
   });
 
   it("should remove event listener on unmount", () => {
@@ -40,7 +41,7 @@ describe("useMediaQuery", () => {
     unmount();
     expect(removeListener).toHaveBeenCalledWith(
       "change",
-      jasmine.any(Function),
+      expect.any(Function),
     );
   });
 });

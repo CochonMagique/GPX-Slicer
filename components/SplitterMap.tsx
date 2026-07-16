@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { TrackPoint, Segment } from "../helpers/gpxUtils";
+import { TrackPoint, Segment, sliceByDistance } from "../helpers/gpxUtils";
 import "leaflet/dist/leaflet.css";
 // Self-hosted Leaflet marker images, bundled from the installed leaflet package
 // (previously loaded from cdnjs). Vite fingerprints and serves these from our origin.
@@ -214,12 +214,12 @@ export const SplitterMap: React.FC<SplitterMapProps> = ({
     onAddSegmentBoundary(closestPoint.dist);
   };
 
-  // Memoize polylines to prevent unnecessary re-renders
+  // Memoize polylines to prevent unnecessary re-renders. sliceByDistance is a
+  // binary search over the distance-sorted points, so recomputing on every
+  // divider drag stays cheap even with 10k+ point routes.
   const segmentPolylines = useMemo(() => {
     return segments.map((segment) => {
-      const segmentPoints = points.filter(
-        (p) => p.dist >= segment.startDist && p.dist <= segment.endDist
-      );
+      const segmentPoints = sliceByDistance(points, segment.startDist, segment.endDist);
       return {
         ...segment,
         positions: segmentPoints.map((p) => [p.lat, p.lon] as [number, number]),

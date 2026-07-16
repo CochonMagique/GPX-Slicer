@@ -12,13 +12,14 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
   "include": [
     "main.tsx",
+    "vite-env.d.ts",
     "pages",
     "components",
     "helpers",
@@ -26,9 +27,6 @@
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "helpers/db.tsx",
-    "helpers/schema.tsx",
-    "**/*.spec.tsx"
+    "dist"
   ]
 }
