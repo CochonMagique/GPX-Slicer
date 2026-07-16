@@ -137,7 +137,8 @@
   display: flex;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: white;
+  /* token, not hardcoded white — white-on-light-text was invisible in dark mode */
+  background-color: var(--card);
   overflow: hidden;
   height: 2.5rem;
 }
