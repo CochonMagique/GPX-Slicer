@@ -13,6 +13,21 @@
     <title>GPX Slicer</title>
   </head>
   <body>
+    <script>
+      // Pre-apply the persisted theme (default: follow system) before React
+      // mounts, so dark-mode users don't get a light flash on load. Kept in
+      // sync with helpers/themeMode.tsx.
+      try {
+        var themeMode = localStorage.getItem("themeMode");
+        if (
+          themeMode === "dark" ||
+          (themeMode !== "light" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.body.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
   </body>

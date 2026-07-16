@@ -1,8 +1,17 @@
 .container {
+  position: relative;
   height: 100vh;
   width: 100vw;
   background-color: var(--background);
   overflow: hidden;
+}
+
+/* Theme switch pinned to the top-right of the landing view */
+.themeSwitchCorner {
+  position: absolute;
+  top: var(--spacing-4);
+  right: var(--spacing-4);
+  z-index: var(--z-content-high);
 }
 
 @media (max-width: 768px) {
@@ -46,9 +55,15 @@
 .heroLogo {
   width: 128px;
   height: 128px;
-  object-fit: contain;
-  /* Colorize black logo to primary green (#145D49) */
-  filter: brightness(0) saturate(100%) invert(23%) sepia(34%) saturate(1844%) hue-rotate(130deg) brightness(91%) contrast(92%);
+  /* Colorize the logo via mask so it follows the theme tokens exactly:
+     Pine green in light mode, Moonlight cream in dark mode. */
+  background-color: var(--primary);
+  mask: url(/logo.svg) no-repeat center / contain;
+  -webkit-mask: url(/logo.svg) no-repeat center / contain;
+}
+
+:global(.dark) .heroLogo {
+  background-color: var(--foreground);
 }
 
 .heroIcon {

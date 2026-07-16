@@ -9,6 +9,27 @@ import React, {
 
 export type ThemeMode = "light" | "dark" | "auto";
 
+// Persist the user's choice across reloads. Guarded: localStorage can throw
+// (Safari private mode, storage disabled).
+const THEME_STORAGE_KEY = "themeMode";
+
+function storeThemeMode(mode: ThemeMode): void {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, mode);
+  } catch {
+    // best-effort only
+  }
+}
+
+export function getStoredThemeMode(): ThemeMode | null {
+  try {
+    const value = localStorage.getItem(THEME_STORAGE_KEY);
+    return value === "light" || value === "dark" || value === "auto" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 // Event mechanism to sync standalone functions with React Context
 type ThemeChangeListener = (mode: ThemeMode) => void;
 const listeners = new Set<ThemeChangeListener>();
@@ -45,6 +66,7 @@ export function switchToDarkMode(): void {
     currentMediaQuery = null;
   }
   document.body.classList.add("dark");
+  storeThemeMode("dark");
   notifyThemeChange();
 }
 
@@ -58,6 +80,7 @@ export function switchToLightMode(): void {
     currentMediaQuery = null;
   }
   document.body.classList.remove("dark");
+  storeThemeMode("light");
   notifyThemeChange();
 }
 
@@ -76,7 +99,24 @@ export function switchToAutoMode(): void {
   };
   currentMediaQuery = mediaQuery;
   updateTheme(mediaQuery.matches);
+  storeThemeMode("auto");
   notifyThemeChange();
+}
+
+/**
+ * Apply the persisted theme mode (defaulting to "auto") and set up the
+ * system-preference listener. Called once on app startup by the provider;
+ * index.html pre-applies the dark class inline to avoid a flash.
+ */
+export function initThemeMode(): void {
+  const stored = getStoredThemeMode() ?? "auto";
+  if (stored === "dark") {
+    switchToDarkMode();
+  } else if (stored === "light") {
+    switchToLightMode();
+  } else {
+    switchToAutoMode();
+  }
 }
 
 /**
@@ -111,6 +151,8 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     const unsubscribe = subscribeToThemeChange((newMode) => {
       setMode(newMode);
     });
+    // Apply the persisted mode (default: auto/system) on startup.
+    initThemeMode();
     return unsubscribe;
   }, []);
 

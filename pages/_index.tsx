@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { SplitterSidebar } from "../components/SplitterSidebar";
+import { ThemeModeSwitch } from "../components/ThemeModeSwitch";
 import { SplitterMap } from "../components/SplitterMap";
 import { SplitterElevationProfile } from "../components/SplitterElevationProfile";
 import { FileDropzone } from "../components/FileDropzone";
@@ -431,10 +432,13 @@ stats
   if (!routeStats) {
     return (
       <div className={styles.container}>
+        <div className={styles.themeSwitchCorner}>
+          <ThemeModeSwitch />
+        </div>
         <div className={styles.initialState}>
           <div className={styles.initialStateContent}>
             <div className={`${styles.heroIcon} ${isUploading ? styles.heroIconLoading : ''}`}>
-              <img src="/logo.svg" alt="GPX Slicer Logo" className={styles.heroLogo} />
+              <div role="img" aria-label="GPX Slicer logo" className={styles.heroLogo} />
             </div>
             <h1 className={styles.heroTitle}>GPX Slicer</h1>
             <p className={styles.heroSubtitle}>Split your routes into multiple days with different length for each segment</p>

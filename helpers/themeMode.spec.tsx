@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import { switchToDarkMode, switchToLightMode, switchToAutoMode, getCurrentThemeMode } from "./themeMode";
+import {
+  switchToDarkMode,
+  switchToLightMode,
+  switchToAutoMode,
+  getCurrentThemeMode,
+  getStoredThemeMode,
+  initThemeMode,
+} from "./themeMode";
 
 // Helper function to create a mutable MediaQueryList mock.
 function createMediaQueryList(initialMatches: boolean, query = "(prefers-color-scheme: dark)") {
@@ -35,8 +42,9 @@ describe("themeMode helper", () => {
   });
 
   beforeEach(() => {
-    // Clear theme classes and reset auto mode before each test.
+    // Clear theme classes and persisted mode before each test.
     document.body.className = "";
+    localStorage.clear();
   });
 
   it("should add the 'dark' class when switching to dark mode", () => {
@@ -124,5 +132,31 @@ describe("themeMode helper", () => {
       createMediaQueryList(true, query);
     switchToAutoMode();
     expect(getCurrentThemeMode()).toBe("auto");
+  });
+
+  it("persists the chosen mode to localStorage", () => {
+    switchToDarkMode();
+    expect(getStoredThemeMode()).toBe("dark");
+    switchToLightMode();
+    expect(getStoredThemeMode()).toBe("light");
+    window.matchMedia = (query: string): MediaQueryList =>
+      createMediaQueryList(false, query);
+    switchToAutoMode();
+    expect(getStoredThemeMode()).toBe("auto");
+  });
+
+  it("initThemeMode applies the stored mode", () => {
+    localStorage.setItem("themeMode", "dark");
+    initThemeMode();
+    expect(document.body.classList.contains("dark")).toBe(true);
+    expect(getCurrentThemeMode()).toBe("dark");
+  });
+
+  it("initThemeMode defaults to auto (system preference) when nothing is stored", () => {
+    window.matchMedia = (query: string): MediaQueryList =>
+      createMediaQueryList(true, query);
+    initThemeMode();
+    expect(getCurrentThemeMode()).toBe("auto");
+    expect(document.body.classList.contains("dark")).toBe(true);
   });
 });
