@@ -1,0 +1,70 @@
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: auto;
+  z-index: var(--z-content-high);
+  touch-action: none;
+}
+
+.hitArea {
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  top: 0;
+  bottom: 0;
+  cursor: col-resize;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Ensure hit area is large enough but doesn't block underlying content visually */
+  background: transparent;
+}
+
+.line {
+  width: 2px;
+  height: 100%;
+  background: var(--border);
+  opacity: 0.6;
+  transition:
+    opacity var(--animation-duration-fast),
+    width var(--animation-duration-fast);
+}
+
+.divider:hover .line,
+.divider.dragging .line {
+  opacity: 1;
+  width: 4px;
+}
+
+.handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: var(--shadow-md);
+  transition:
+    transform var(--animation-duration-fast),
+    box-shadow var(--animation-duration-fast);
+  z-index: 2;
+  border: 2px solid white;
+}
+
+.divider:hover .handle {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.divider.dragging .handle {
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing;
+}

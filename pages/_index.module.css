@@ -1,0 +1,267 @@
+.container {
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--background);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .container {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+/* Initial State - Centered Dropzone */
+.initialState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: var(--spacing-8);
+  background-color: var(--background);
+}
+
+.initialStateContent {
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  animation: fadeInUp 600ms ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.heroLogo {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  /* Colorize black logo to primary green (#145D49) */
+  filter: brightness(0) saturate(100%) invert(23%) sepia(34%) saturate(1844%) hue-rotate(130deg) brightness(91%) contrast(92%);
+}
+
+.heroIcon {
+  color: var(--primary);
+  margin-bottom: var(--spacing-6);
+  display: flex;
+  justify-content: center;
+  animation: scaleIn 600ms ease-out 200ms both;
+  transition: transform var(--animation-duration-normal) ease;
+}
+
+.heroIcon.heroIconLoading {
+  animation: scaleIn 600ms ease-out 200ms both, logoPulse 2s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.heroTitle {
+  font-family: var(--font-family-heading);
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: var(--spacing-4);
+  letter-spacing: -0.02em;
+}
+
+.heroSubtitle {
+  font-size: 1.125rem;
+  color: var(--muted-foreground);
+  margin-bottom: var(--spacing-10);
+  line-height: 1.6;
+}
+
+.dropzoneWrapper {
+  animation: fadeIn 600ms ease-out 400ms both;
+  position: relative;
+}
+
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  backdrop-filter: blur(4px);
+  border-radius: var(--radius-lg);
+  z-index: var(--z-overlay);
+  animation: fadeIn var(--animation-duration-normal) ease-out;
+}
+
+.loadingContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-6);
+  animation: fadeInUp var(--animation-duration-normal) ease-out;
+}
+
+.loadingText {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* App Layout - Fixed panels */
+.appLayout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .appLayout {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  background-color: var(--surface);
+  z-index: var(--z-nav);
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: 
+    transform 500ms ease-out,
+    opacity 500ms ease-out;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    transform: none !important;
+    opacity: 1 !important;
+    display: contents; /* Unwrap the aside to let children participate in flex column */
+  }
+}
+
+.sidebar.sidebarVisible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  opacity: 0;
+  transform: translateX(2rem);
+  transition: 
+    transform 500ms ease-out 200ms,
+    opacity 500ms ease-out 200ms;
+}
+
+.mainContent.mainContentVisible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    order: 2; /* Map + Elevation comes after Header */
+    height: auto;
+    flex: none;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+.mapSection {
+  flex: 0 0 70%;
+  min-height: 0;
+  background-color: var(--card);
+}
+
+.elevationSection {
+  flex: 0 0 30%;
+  min-height: 0;
+  background-color: var(--card);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  .mapSection {
+    flex: none;
+    height: 45vh; /* Takes significant space */
+    min-height: 300px;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .elevationSection {
+    flex: none;
+    height: 180px;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 280px;
+  }
+  
+  .heroTitle {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 2rem;
+  }
+  
+  .heroSubtitle {
+    font-size: 1rem;
+  }
+}

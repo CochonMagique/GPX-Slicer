@@ -1,0 +1,353 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: contents; /* Allows children to be part of the main grid/flex layout */
+  }
+}
+
+.sidebarEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--spacing-6);
+  background-color: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.uploadContainer {
+  width: 100%;
+  text-align: center;
+}
+
+.sidebarTitle {
+  font-family: var(--font-family-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-2);
+  color: var(--foreground);
+}
+
+.sidebarSubtitle {
+  color: var(--muted-foreground);
+  margin-bottom: var(--spacing-6);
+}
+
+.dropzone {
+  width: 100%;
+}
+
+.header {
+  padding: var(--spacing-4);
+  background-color: var(--surface);
+}
+
+@media (max-width: 768px) {
+  .header {
+    order: 1; /* Top */
+    position: sticky;
+    top: 0;
+    z-index: var(--z-nav-sticky);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    margin: 0;
+  }
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-2);
+}
+
+.routeTitle {
+  font-family: var(--font-family-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: var(--spacing-2);
+}
+
+.statsGrid {
+  display: flex;
+  gap: var(--spacing-4);
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.controls {
+  padding: var(--spacing-4);
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  .controls {
+    order: 3; /* Below map/elevation */
+    border-top: 1px solid var(--border);
+  }
+}
+
+.controlsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-2);
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.distributeBtn {
+  width: 100%;
+  margin-top: var(--spacing-3);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.distributeBtn:hover:not(:disabled) {
+  color: var(--primary);
+}
+
+.dayInputWrapper {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: white;
+  overflow: hidden;
+  height: 2.5rem;
+}
+
+.dayInput {
+  flex: 1;
+  text-align: center;
+  border: none;
+  background: transparent;
+}
+
+.dayInput:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.dayBtn {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent;
+  flex-shrink: 0;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dayBtn:hover:not(:disabled) {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.dayBtnLeft {
+  border-right: 1px solid var(--border) !important;
+}
+
+.dayBtnRight {
+  border-left: 1px solid var(--border) !important;
+}
+
+.dayInputSuffix {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.segmentsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-4);
+}
+
+@media (max-width: 768px) {
+  .segmentsList {
+    order: 4; /* Below controls */
+    overflow: visible; /* Let body scroll */
+    flex: none;
+    background-color: var(--surface);
+    padding-bottom: calc(var(--spacing-16) + var(--spacing-8)); /* Space for fixed footer */
+  }
+}
+
+.segmentCards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.segmentCardWrapper {
+  overflow: hidden;
+  transition: none;
+}
+
+.segmentCardWrapperCollapse {
+  animation: wrapperCollapse 150ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+.segmentCard {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--card);
+  overflow: hidden;
+  transition: none;
+}
+
+.segmentCardEnter {
+  animation: segmentEnter 250ms ease-out;
+}
+
+.segmentCardExit {
+  animation: segmentExit 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes segmentEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes segmentExit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes wrapperCollapse {
+  from {
+    max-height: 200px;
+    margin-bottom: var(--spacing-2);
+    opacity: 1;
+  }
+  to {
+    max-height: 0;
+    margin-bottom: 0;
+    opacity: 0;
+  }
+}
+
+.segmentColorIndicator {
+  width: 6px;
+  flex-shrink: 0;
+  transition: background-color 200ms ease;
+}
+
+.segmentCardContent {
+  flex: 1;
+  padding: var(--spacing-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  transition: opacity 200ms ease;
+}
+
+.segmentCardContentUpdating {
+  animation: fadeUpdate 200ms ease;
+}
+
+@keyframes fadeUpdate {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.segmentCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.segmentActions {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.segmentTitle {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+}
+
+.segmentStats {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.segmentStat {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.footer {
+  padding: var(--spacing-4);
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.exportAllBtn {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    order: 5;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-nav-sticky);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  }
+}

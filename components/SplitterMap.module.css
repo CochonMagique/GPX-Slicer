@@ -1,0 +1,51 @@
+.mapContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1; /* Ensure it stays below overlays but above background */
+}
+
+.leafletMap {
+  width: 100%;
+  height: 100%;
+  background-color: var(--muted);
+}
+
+.emptyMap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 1.2rem;
+}
+
+.boundaryMarker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.clickablePolyline {
+  cursor: pointer;
+}
+.clickablePolyline:hover {
+  stroke-width: 8px; /* Slightly thicker on hover to indicate interactiveness */
+}
+
+/* Polyline animation - drawing effect */
+.polylineAnimate {
+  animation: drawLine 2s ease-out forwards;
+}
+
+@keyframes drawLine {
+  from {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 0;
+  }
+}
