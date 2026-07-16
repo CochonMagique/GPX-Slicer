@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { FileDropzone } from "./FileDropzone";
 import { Button } from "./Button";
-import { ThemeModeSwitch } from "./ThemeModeSwitch";
 import { Input } from "./Input";
 import { Slider } from "./Slider";
 import { Separator } from "./Separator";
@@ -259,12 +258,9 @@ export const SplitterSidebar: React.FC<SplitterSidebarProps> = ({
           <h2 className={styles.routeTitle} title={routeStats.name}>
             {routeStats.name}
           </h2>
-          <div className={styles.headerActions}>
-            <ThemeModeSwitch />
-            <Button variant="ghost" size="icon-sm" onClick={onReset} title="Reset">
-              <Trash2 size={16} />
-            </Button>
-          </div>
+          <Button variant="ghost" size="icon-sm" onClick={onReset} title="Reset">
+            <Trash2 size={16} />
+          </Button>
         </div>
         <div className={styles.statsGrid}>
           <div className={styles.statItem}>

@@ -352,9 +352,3 @@
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
   }
 }
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-  flex-shrink: 0;
-}
